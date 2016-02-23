@@ -1,5 +1,5 @@
 
-package org.apache.cordova.plugin.clientcertificate;
+package org.apache.cordova.plugin.clientcert;
 
 import android.annotation.TargetApi;
 import android.content.Context;
@@ -14,11 +14,23 @@ import android.widget.Toast;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.ICordovaClientCertRequest;
-
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.CordovaInterface;
+import org.json.JSONObject;
+import org.json.JSONArray;
+import org.json.JSONException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutorService;
-
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.cert.CertificateFactory;
+import java.util.Collection;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.io.FileInputStream;
+import java.io.InputStream;
 
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class ClientCertificate extends CordovaPlugin {
@@ -32,7 +44,11 @@ public class ClientCertificate extends CordovaPlugin {
     public Boolean shouldAllowBridgeAccess(String url) {
         return super.shouldAllowBridgeAccess(url);
     }
-
+  @Override
+    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
+        super.initialize(cordova, webView);
+ 
+    }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -40,18 +56,15 @@ public class ClientCertificate extends CordovaPlugin {
       try {
                 KeyStore keystore = KeyStore.getInstance("PKCS12");
                
-                InputStream astream = getAssets().open(p12path);
+                InputStream astream = cordova.getActivity().getApplicationContext().getAssets().open(p12path);
                 keystore.load(astream, p12password.toCharArray());
                 astream.close();
                 Enumeration e = keystore.aliases();
                 if (e.hasMoreElements()) {
                     String ealias = (String) e.nextElement();
                     PrivateKey key = (PrivateKey) keystore.getKey(ealias, p12password.toCharArray());
-                    CertificateFactory cf = CertificateFactory.getInstance("X.509");
-                    InputStream bstream = getAssets().open(p12path);
-                    Collection c = cf.generateCertificates(bstream);
-                    bstream.close();
-                    X509Certificate[] certs = (X509Certificate[])(c.toArray(new X509Certificate[c.size()]));
+                    java.security.cert.Certificate[]  chain = keystore.getCertificateChain(ealias);
+                    X509Certificate[] certs = Arrays.copyOf(chain, chain.length, X509Certificate[].class);
                     request.proceed(key,certs);
                 } else
                 {
