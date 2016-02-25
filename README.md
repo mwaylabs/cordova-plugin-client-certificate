@@ -1,11 +1,11 @@
 # Cordova Client Certificate Plugin
 
-Plugin that uses a client certificate for authetication.
+Plugin that uses a client certificate for authentication.
 
 ## Using
 Clone the plugin
 
-    $ git clone https://github.com/stefanjauker/cordova-plugin-client-certificate.git
+    $ git clone https://github.com/mwaylabs/cordova-plugin-client-certificate.git
 
 Create a new Cordova Project
 
