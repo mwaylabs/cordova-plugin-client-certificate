@@ -1,0 +1,45 @@
+{
+    "name": "cordova-plugin-client-certificate",
+    "description": "Client certificate authentication for your Cordova app.",
+    "version": "0.0.1",
+    "homepage": "https://github.com/mwaylabs/cordova-plugin-client-certificate",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mwaylabs/cordova-plugin-client-certificate.git"
+    },
+    "bugs": {
+      "url": "https://github.com/mwaylabs/cordova-plugin-client-certificate/issues"
+    },
+    "cordova": {
+      "id": "cordova-plugin-client-certificate",
+      "platforms": [
+        "ios"
+      ]
+    },
+    "keywords": [
+      "ecosystem:cordova",
+      "ecosystem:phonegap",
+      "cordova-ios",
+      "cordova",
+      "client",
+      "certificate",
+      "authentication",
+      "pkcs12",
+      "p12"
+    ],
+    "scripts": {
+      "test": "npm run jshint",
+      "jshint": "node node_modules/jshint/bin/jshint www && node node_modules/jshint/bin/jshint src"
+    },
+    "engines": [
+      {
+        "name": "cordova",
+        "version": ">=3.0.0"
+      }
+    ],
+    "author": "M-Way Solutions GmbH",
+    "license": "Apache-2.0",
+    "devDependencies": {
+      "jshint": "^2.6.0"
+    }
+}
