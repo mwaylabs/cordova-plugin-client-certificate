@@ -28,7 +28,7 @@
     <license>Apache 2.0</license>
     <keywords>client, certificate, authentication, client certificate</keywords>
     <repo>https://github.com/mwaylabs/cordova-plugin-client-certificate.git</repo>
-    <issue>https://github.com/mwaylabs/cordova-plugin-client-certificate</issue>
+    <issue>https://github.com/mwaylabs/cordova-plugin-client-certificate/issues</issue>
 
     <js-module src="www/clientCertificate.js" name="clientCertificate">
         <clobbers target="clientCertificate" />
