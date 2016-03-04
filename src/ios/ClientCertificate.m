@@ -6,9 +6,9 @@
  to you under the Apache License, Version 2.0 (the
  "License"); you may not use this file except in compliance
  with the License.  You may obtain a copy of the License at
-
+ 
  http://www.apache.org/licenses/LICENSE-2.0
-
+ 
  Unless required by applicable law or agreed to in writing,
  software distributed under the License is distributed on an
  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -26,6 +26,7 @@
 
 @interface ClientCertificate ()
 {
+    BOOL validateSslChain;
     NSString* certificatePath;
     NSString* certificatePassword;
 }
@@ -33,11 +34,16 @@
 
 @implementation ClientCertificate
 
-- (void)register:(CDVInvokedUrlCommand*)command
+- (void)pluginInitialize
+{
+    validateSslChain = YES;
+}
+
+- (void)registerAuthenticationCertificate:(CDVInvokedUrlCommand*)command
 {
     NSString* certPath = [command argumentAtIndex:0];
     NSString* password = [command argumentAtIndex:1];
-
+    
     //check certificate path
     NSString *path = [[[NSBundle mainBundle] resourcePath] stringByAppendingFormat:@"/www/%@", certPath];
     if(![[NSFileManager defaultManager] fileExistsAtPath:path]) {
@@ -65,8 +71,12 @@
     
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
 
-    
+- (void)validateSslChain:(CDVInvokedUrlCommand*)command {
+    validateSslChain = [command argumentAtIndex:0];
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (BOOL)customHTTPProtocol:(CustomHTTPProtocol *)protocol canAuthenticateAgainstProtectionSpace:(NSURLProtectionSpace *)protectionSpace
@@ -74,7 +84,7 @@
     NSLog(@"canAuthenticateAgainstProtectionSpace: %@", protectionSpace.authenticationMethod);
     
     if ([protectionSpace authenticationMethod] == NSURLAuthenticationMethodServerTrust) {
-        return YES;
+        return !validateSslChain;
     } else if ([protectionSpace authenticationMethod] == NSURLAuthenticationMethodClientCertificate) {
         return YES;
     }
@@ -111,7 +121,7 @@
             const void *certs[] = { myCertificate };
             CFArrayRef certsArray = CFArrayCreate(NULL, certs, 1, NULL);
             credential = [NSURLCredential credentialWithIdentity:myIdentity certificates:(__bridge NSArray*)certsArray persistence:NSURLCredentialPersistencePermanent];
-
+            
         }
         
         [protocol resolveAuthenticationChallenge:challenge withCredential:credential];

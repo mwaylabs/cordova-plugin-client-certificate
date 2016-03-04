@@ -1,7 +1,10 @@
 /*global cordova, module*/
 
 module.exports = {
-    register: function (certificatePath, certificatePassword, successCallback, errorCallback) {
-        cordova.exec(successCallback, errorCallback, "ClientCertificate", "register", [certificatePath, certificatePassword]);
+    registerAuthenticationCertificate: function (certificatePath, certificatePassword, successCallback, errorCallback) {
+        cordova.exec(successCallback, errorCallback, "ClientCertificate", "registerAuthenticationCertificate", [certificatePath, certificatePassword]);
+    },
+    validateSslChain: function (validate, successCallback, errorCallback) {
+        cordova.exec(successCallback, errorCallback, "ClientCertificate", "validateSslChain", [validate]);
     }
 };

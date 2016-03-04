@@ -22,7 +22,7 @@
     xmlns:rim="http://www.blackberry.com/ns/widgets"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-client-certificate"
-    version="0.0.1">
+    version="0.0.2">
     <name>Client Certificate</name>
     <description>Cordova Client Certificate Plugin</description>
     <license>Apache 2.0</license>
