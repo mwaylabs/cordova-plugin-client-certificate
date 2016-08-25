@@ -106,14 +106,26 @@
         else if(authMethod == NSURLAuthenticationMethodClientCertificate ) {
             OSStatus status = noErr;
             SecIdentityRef myIdentity;
-            SecTrustRef myTrust;
-            status = extractIdentityAndTrust(certificatePath, certificatePassword, &myIdentity, &myTrust);
+            //SecTrustRef myTrust;
             
-            SecTrustResultType trustResult;
+            NSMutableDictionary *query = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                          (__bridge id)kSecClass, (__bridge id)kSecClass,
+                                          (__bridge id)kCFBooleanTrue, (__bridge id)kSecReturnRef,
+                                          (__bridge id)kSecMatchLimitOne, (__bridge id)kSecMatchLimit,
+                                          nil];
             
-            if (status == noErr) {
-                status = SecTrustEvaluate(myTrust, &trustResult);
+            NSArray *secItemClasses = [NSArray arrayWithObjects:
+                                       (__bridge id)kSecClassIdentity,
+                                       nil];
+            
+            for (id secItemClass in secItemClasses) {
+                [query setObject:secItemClass forKey:(__bridge id)kSecClass];
+                
+                CFTypeRef result = NULL;
+                SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
+                myIdentity = (SecIdentityRef)result;
             }
+
             
             SecCertificateRef myCertificate;
             SecIdentityCopyCertificate(myIdentity, &myCertificate);
@@ -146,20 +158,65 @@ OSStatus extractIdentityAndTrust(NSString *certPath, NSString *pwd, SecIdentityR
         CFDictionaryRef myIdentityAndTrust = CFArrayGetValueAtIndex (items, 0);
         const void *tempIdentity = NULL;
         tempIdentity = CFDictionaryGetValue (myIdentityAndTrust, kSecImportItemIdentity);
-        
+
         *identity = (SecIdentityRef)tempIdentity;
+        
         const void *tempTrust = NULL;
         tempTrust = CFDictionaryGetValue (myIdentityAndTrust, kSecImportItemTrust);
         *trust = (SecTrustRef)tempTrust;
+
+        SecTrustResultType trustResult;
+        OSStatus status = SecTrustEvaluate(*trust, &trustResult);
+        if (status == errSecSuccess) {
+
+            // Persist identity to keychain
+            NSMutableDictionary *secIdentityParams = [[NSMutableDictionary alloc] init];
+            [secIdentityParams setObject:(__bridge id)tempIdentity forKey:(id)kSecValueRef];
+            status = SecItemAdd((CFDictionaryRef) secIdentityParams, NULL);
+        }
     }
     
     if (optionsDictionary) {
         CFRelease(optionsDictionary);
     }
     
+    if (items)
+        CFRelease(items);
+
     return securityError;
 }
 
+CFDataRef persistentRefForIdentity(SecIdentityRef identity)
+{
+    OSStatus status = errSecSuccess;
+ 
+    CFTypeRef  persistent_ref = NULL;
+    const void *keys[] =   { kSecReturnPersistentRef, kSecValueRef };
+    const void *values[] = { kCFBooleanTrue,          identity };
+    CFDictionaryRef dict = CFDictionaryCreate(NULL, keys, values,
+                                              2, NULL, NULL);
+    status = SecItemAdd(dict, &persistent_ref);
+ 
+    if (dict)
+        CFRelease(dict);
+ 
+    return (CFDataRef)persistent_ref;
+}
+
+SecIdentityRef identityForPersistentRef(CFDataRef persistent_ref)
+{
+    CFTypeRef   identity_ref     = NULL;
+    const void *keys[] =   { kSecClass, kSecReturnRef,  kSecValuePersistentRef };
+    const void *values[] = { kSecClassIdentity, kCFBooleanTrue, persistent_ref };
+    CFDictionaryRef dict = CFDictionaryCreate(NULL, keys, values,
+                                              3, NULL, NULL);
+    SecItemCopyMatching(dict, &identity_ref);
+ 
+    if (dict)
+        CFRelease(dict);
+ 
+    return (SecIdentityRef)identity_ref;
+}
 
 
 @end
