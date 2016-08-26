@@ -174,6 +174,13 @@ OSStatus extractIdentityAndTrust(NSString *certPath, NSString *pwd, SecIdentityR
         OSStatus status = SecTrustEvaluate(*trust, &trustResult);
         if (status == errSecSuccess) {
 
+            // Clear app keychain
+            void (^deleteAllKeysForSecClass)(CFTypeRef) = ^(CFTypeRef secClass) {
+                id dict = @{(__bridge id)kSecClass: (__bridge id)secClass};
+                SecItemDelete((__bridge CFDictionaryRef) dict);
+            };
+            deleteAllKeysForSecClass(kSecClassIdentity);
+
             // Persist identity to keychain
             NSMutableDictionary *secIdentityParams = [[NSMutableDictionary alloc] init];
             [secIdentityParams setObject:(__bridge id)tempIdentity forKey:(id)kSecValueRef];
