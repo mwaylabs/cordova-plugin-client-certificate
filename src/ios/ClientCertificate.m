@@ -37,6 +37,11 @@
 - (void)pluginInitialize
 {
     validateSslChain = YES;
+
+    // TODO: Check for keychain item, set self as delegate if so
+    
+    [CustomHTTPProtocol setDelegate:self];
+    [CustomHTTPProtocol start];
 }
 
 - (void)registerAuthenticationCertificate:(CDVInvokedUrlCommand*)command
