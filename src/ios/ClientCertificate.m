@@ -109,9 +109,7 @@
         }
         
         else if(authMethod == NSURLAuthenticationMethodClientCertificate ) {
-            OSStatus status = noErr;
-            SecIdentityRef myIdentity;
-            //SecTrustRef myTrust;
+            SecIdentityRef myIdentity = NULL;
             
             NSMutableDictionary *query = [NSMutableDictionary dictionaryWithObjectsAndKeys:
                                           (__bridge id)kSecClass, (__bridge id)kSecClass,
@@ -128,16 +126,20 @@
                 
                 CFTypeRef result = NULL;
                 SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
-                myIdentity = (SecIdentityRef)result;
+                if(result != NULL) {
+                    myIdentity = (SecIdentityRef)result;
+                }
             }
 
             
             SecCertificateRef myCertificate;
-            SecIdentityCopyCertificate(myIdentity, &myCertificate);
-            const void *certs[] = { myCertificate };
-            CFArrayRef certsArray = CFArrayCreate(NULL, certs, 1, NULL);
-            credential = [NSURLCredential credentialWithIdentity:myIdentity certificates:(__bridge NSArray*)certsArray persistence:NSURLCredentialPersistencePermanent];
-            
+            if(myIdentity != NULL) {
+                SecIdentityCopyCertificate(myIdentity, &myCertificate);
+                const void *certs[] = { myCertificate };
+                CFArrayRef certsArray = CFArrayCreate(NULL, certs, 1, NULL);
+                credential = [NSURLCredential credentialWithIdentity:myIdentity certificates:(__bridge NSArray*)certsArray persistence:NSURLCredentialPersistencePermanent];
+            }
+
         }
         
         [protocol resolveAuthenticationChallenge:challenge withCredential:credential];
