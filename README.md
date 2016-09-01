@@ -30,7 +30,7 @@ Edit `www/js/index.js` and add the following code inside `onDeviceReady`
         alert("Error:" + error);
     }
 
-    clientCertificate.register("certfilePath/cert.p12", "s3cr37", success, failure);
+    clientCertificate.registerAuthenticationCertificate("certfilePath/cert.p12", "s3cr37", success, failure);
 ```
 
 Install iOS platform
