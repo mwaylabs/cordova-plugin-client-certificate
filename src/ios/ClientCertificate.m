@@ -37,15 +37,19 @@
 - (void)pluginInitialize
 {
     validateSslChain = YES;
+
+    // TODO: Check for keychain item, set self as delegate if so
+    
+    [CustomHTTPProtocol setDelegate:self];
+    [CustomHTTPProtocol start];
 }
 
 - (void)registerAuthenticationCertificate:(CDVInvokedUrlCommand*)command
 {
-    NSString* certPath = [command argumentAtIndex:0];
+    NSString* path = [command argumentAtIndex:0];
     NSString* password = [command argumentAtIndex:1];
     
     //check certificate path
-    NSString *path = [[[NSBundle mainBundle] resourcePath] stringByAppendingFormat:@"/www/%@", certPath];
     if(![[NSFileManager defaultManager] fileExistsAtPath:path]) {
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[NSString stringWithFormat:@"certificate file not found: %@", path]];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
@@ -105,23 +109,37 @@
         }
         
         else if(authMethod == NSURLAuthenticationMethodClientCertificate ) {
-            OSStatus status = noErr;
-            SecIdentityRef myIdentity;
-            SecTrustRef myTrust;
-            status = extractIdentityAndTrust(certificatePath, certificatePassword, &myIdentity, &myTrust);
+            SecIdentityRef myIdentity = NULL;
             
-            SecTrustResultType trustResult;
+            NSMutableDictionary *query = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+                                          (__bridge id)kSecClass, (__bridge id)kSecClass,
+                                          (__bridge id)kCFBooleanTrue, (__bridge id)kSecReturnRef,
+                                          (__bridge id)kSecMatchLimitOne, (__bridge id)kSecMatchLimit,
+                                          nil];
             
-            if (status == noErr) {
-                status = SecTrustEvaluate(myTrust, &trustResult);
+            NSArray *secItemClasses = [NSArray arrayWithObjects:
+                                       (__bridge id)kSecClassIdentity,
+                                       nil];
+            
+            for (id secItemClass in secItemClasses) {
+                [query setObject:secItemClass forKey:(__bridge id)kSecClass];
+                
+                CFTypeRef result = NULL;
+                SecItemCopyMatching((__bridge CFDictionaryRef)query, &result);
+                if(result != NULL) {
+                    myIdentity = (SecIdentityRef)result;
+                }
             }
+
             
             SecCertificateRef myCertificate;
-            SecIdentityCopyCertificate(myIdentity, &myCertificate);
-            const void *certs[] = { myCertificate };
-            CFArrayRef certsArray = CFArrayCreate(NULL, certs, 1, NULL);
-            credential = [NSURLCredential credentialWithIdentity:myIdentity certificates:(__bridge NSArray*)certsArray persistence:NSURLCredentialPersistencePermanent];
-            
+            if(myIdentity != NULL) {
+                SecIdentityCopyCertificate(myIdentity, &myCertificate);
+                const void *certs[] = { myCertificate };
+                CFArrayRef certsArray = CFArrayCreate(NULL, certs, 1, NULL);
+                credential = [NSURLCredential credentialWithIdentity:myIdentity certificates:(__bridge NSArray*)certsArray persistence:NSURLCredentialPersistencePermanent];
+            }
+
         }
         
         [protocol resolveAuthenticationChallenge:challenge withCredential:credential];
@@ -147,20 +165,72 @@ OSStatus extractIdentityAndTrust(NSString *certPath, NSString *pwd, SecIdentityR
         CFDictionaryRef myIdentityAndTrust = CFArrayGetValueAtIndex (items, 0);
         const void *tempIdentity = NULL;
         tempIdentity = CFDictionaryGetValue (myIdentityAndTrust, kSecImportItemIdentity);
-        
+
         *identity = (SecIdentityRef)tempIdentity;
+        
         const void *tempTrust = NULL;
         tempTrust = CFDictionaryGetValue (myIdentityAndTrust, kSecImportItemTrust);
         *trust = (SecTrustRef)tempTrust;
+
+        SecTrustResultType trustResult;
+        OSStatus status = SecTrustEvaluate(*trust, &trustResult);
+        if (status == errSecSuccess) {
+
+            // Clear app keychain
+            void (^deleteAllKeysForSecClass)(CFTypeRef) = ^(CFTypeRef secClass) {
+                id dict = @{(__bridge id)kSecClass: (__bridge id)secClass};
+                SecItemDelete((__bridge CFDictionaryRef) dict);
+            };
+            deleteAllKeysForSecClass(kSecClassIdentity);
+
+            // Persist identity to keychain
+            NSMutableDictionary *secIdentityParams = [[NSMutableDictionary alloc] init];
+            [secIdentityParams setObject:(__bridge id)tempIdentity forKey:(id)kSecValueRef];
+            status = SecItemAdd((CFDictionaryRef) secIdentityParams, NULL);
+        }
     }
     
     if (optionsDictionary) {
         CFRelease(optionsDictionary);
     }
     
+    if (items)
+        CFRelease(items);
+
     return securityError;
 }
 
+CFDataRef persistentRefForIdentity(SecIdentityRef identity)
+{
+    OSStatus status = errSecSuccess;
+ 
+    CFTypeRef  persistent_ref = NULL;
+    const void *keys[] =   { kSecReturnPersistentRef, kSecValueRef };
+    const void *values[] = { kCFBooleanTrue,          identity };
+    CFDictionaryRef dict = CFDictionaryCreate(NULL, keys, values,
+                                              2, NULL, NULL);
+    status = SecItemAdd(dict, &persistent_ref);
+ 
+    if (dict)
+        CFRelease(dict);
+ 
+    return (CFDataRef)persistent_ref;
+}
+
+SecIdentityRef identityForPersistentRef(CFDataRef persistent_ref)
+{
+    CFTypeRef   identity_ref     = NULL;
+    const void *keys[] =   { kSecClass, kSecReturnRef,  kSecValuePersistentRef };
+    const void *values[] = { kSecClassIdentity, kCFBooleanTrue, persistent_ref };
+    CFDictionaryRef dict = CFDictionaryCreate(NULL, keys, values,
+                                              3, NULL, NULL);
+    SecItemCopyMatching(dict, &identity_ref);
+ 
+    if (dict)
+        CFRelease(dict);
+ 
+    return (SecIdentityRef)identity_ref;
+}
 
 
 @end
