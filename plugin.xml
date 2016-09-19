@@ -55,5 +55,13 @@
         <source-file src="src/ios/QNSURLSessionDemux.m" />
 
     </platform>
-
+  <platform name="android">
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="ClientCertificate">
+        <param name="android-package" value="org.apache.cordova.plugin.clientcert.ClientCertificate"/>
+        <param name="onload" value="true" />
+      </feature>
+    </config-file>
+    <source-file src="src/android/ClientCertificate.java" target-dir="src/org/apache/cordova/plugin/"/>
+  </platform>
 </plugin>
