@@ -1,4 +1,3 @@
-
 package org.apache.cordova.plugin.clientcert;
 
 import android.annotation.TargetApi;
@@ -35,59 +34,52 @@ import java.io.InputStream;
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class ClientCertificate extends CordovaPlugin {
 
-
-    public String p12path = "";
-    public String p12password = "";
-
+    private String p12path = "";
+    private String p12password = "";
 
     @Override
     public Boolean shouldAllowBridgeAccess(String url) {
         return super.shouldAllowBridgeAccess(url);
     }
-  @Override
+
+    @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
- 
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     public boolean onReceivedClientCertRequest(CordovaWebView view, ICordovaClientCertRequest request) {
-      try {
-                KeyStore keystore = KeyStore.getInstance("PKCS12");
-               
-                InputStream astream = cordova.getActivity().getApplicationContext().getAssets().open(p12path);
-                keystore.load(astream, p12password.toCharArray());
-                astream.close();
-                Enumeration e = keystore.aliases();
-                if (e.hasMoreElements()) {
-                    String ealias = (String) e.nextElement();
-                    PrivateKey key = (PrivateKey) keystore.getKey(ealias, p12password.toCharArray());
-                    java.security.cert.Certificate[]  chain = keystore.getCertificateChain(ealias);
-                    X509Certificate[] certs = Arrays.copyOf(chain, chain.length, X509Certificate[].class);
-                    request.proceed(key,certs);
-                } else
-                {
-                    request.ignore();
-                }
+        try {
+            KeyStore keystore = KeyStore.getInstance("PKCS12");
 
-            } catch (Exception ex)
-            {
+            InputStream astream = cordova.getActivity().getApplicationContext().getAssets().open(p12path);
+            keystore.load(astream, p12password.toCharArray());
+            astream.close();
+            Enumeration e = keystore.aliases();
+            if (e.hasMoreElements()) {
+                String ealias = (String) e.nextElement();
+                PrivateKey key = (PrivateKey) keystore.getKey(ealias, p12password.toCharArray());
+                java.security.cert.Certificate[]  chain = keystore.getCertificateChain(ealias);
+                X509Certificate[] certs = Arrays.copyOf(chain, chain.length, X509Certificate[].class);
+                request.proceed(key,certs);
+            } else {
                 request.ignore();
             }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            request.ignore();
+        }
         return true;
     }
 
     @Override
     public boolean execute(String action, JSONArray a, CallbackContext c) throws JSONException {
-        if (action.equals("register"))
-        {
-            p12path = "www/" + a.getString(0);
+        if (action.equals("registerAuthenticationCertificate")) {
+            p12path = a.getString(0);
             p12password = a.getString(1);
             return true;
         }
         return false;
     }
-
-
 }
