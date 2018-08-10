@@ -78,8 +78,10 @@ public class ClientCertificate extends CordovaPlugin {
         if (action.equals("registerAuthenticationCertificate")) {
             p12path = a.getString(0);
             p12password = a.getString(1);
+            c.success();
             return true;
         }
+        c.error("Unknown Action");
         return false;
     }
 }
